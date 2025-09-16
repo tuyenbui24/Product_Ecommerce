@@ -1,3 +1,11 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* custom utilities (optional)
+.btn { @apply px-4 py-2 rounded bg-gray-900 text-white; }
+*/
+ 
+@import "tailwindcss";
+@layer base {
+  button, a, [role="button"] { cursor: pointer; }
+}
+
+/* @import "tailwindcss/preflight";
+@import "tailwindcss/utilities"; */
