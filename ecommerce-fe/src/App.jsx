@@ -1,4 +1,3 @@
-// src/App.jsx
 import { Fragment, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Routes, Route, useLocation } from "react-router-dom";
@@ -16,6 +15,7 @@ import AdminProducts from "@pages/admin/Products";
 import AdminCategories from "@pages/admin/Categories";
 import AdminStaffs from "@pages/admin/Staffs";
 import AdminOrders from "@pages/admin/Orders";
+import AdminStats from "@pages/admin/AdminStats";
 
 function App() {
   const dispatch = useDispatch();
@@ -61,9 +61,9 @@ function App() {
 
         <Route element={<ProtectedRoute roles={['ROLE_ADMIN','ROLE_STAFF']} />}>
           <Route path="/admin" element={<AdminLayout />}>
+            <Route path="stats" element={<AdminStats />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="products" element={<AdminProducts />} />
-            <Route path="categories" element={<AdminCategories />} />
             <Route path="staffs" element={<AdminStaffs />} />
             <Route path="orders" element={<AdminOrders />} />
             <Route path="categories" element={<AdminCategories />} />

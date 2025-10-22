@@ -1,10 +1,9 @@
-// src/layouts/MainLayout.jsx
 import { Outlet } from "react-router-dom";
 import Header from "@components/common/Header";
 
 export default function MainLayout({ children }) {
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-orange-50">
       <Header />
 
       <main className="flex-1">

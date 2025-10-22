@@ -1,11 +1,89 @@
-/* custom utilities (optional)
-.btn { @apply px-4 py-2 rounded bg-gray-900 text-white; }
-*/
- 
 @import "tailwindcss";
+
 @layer base {
   button, a, [role="button"] { cursor: pointer; }
 }
+@layer components {
+  .card {
+    @apply p-4 border rounded shadow-lg bg-white;
+  }
+}
 
-/* @import "tailwindcss/preflight";
-@import "tailwindcss/utilities"; */
+.swiper {
+  width: 100%;
+  user-select: none;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.swiper-wrapper {
+  display: flex;
+  gap: 30px !important;
+}
+
+.swiper-slide {
+  user-select: none;
+  height: auto !important;
+  width: auto !important;
+  margin-right: 0 !important;
+}
+
+.swiper-pagination {
+  position: relative !important;
+  margin-top: 0.75rem;
+}
+.swiper-pagination-bullet {
+  background-color: #d1d5db;
+  opacity: 1;
+}
+.swiper-pagination-bullet-active {
+  background-color: #f59e0b;
+}
+
+.swiper-button-prev,
+.swiper-button-next {
+  color: #f97316 !important;
+  transition: color 0.3s ease;
+  width: 32px;
+  height: 32px;
+}
+
+.swiper-button-prev:hover,
+.swiper-button-next:hover {
+  color: #ea580c !important;
+}
+
+.swiper::-webkit-scrollbar {
+  display: none;
+}
+
+.swiper,
+.swiper-slide {
+  user-select: none;
+  -webkit-user-drag: none;
+  -webkit-tap-highlight-color: transparent;
+  scroll-behavior: smooth;
+  transition-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.smooth-free .swiper-wrapper {
+  transition-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+}
+
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-slide-down {
+  animation: slide-down 0.2s ease-out;
+}
+
+
+
+

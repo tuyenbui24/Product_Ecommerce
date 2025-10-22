@@ -97,8 +97,8 @@ export default function AdminCategories() {
             <tr className="text-left text-sm">
               <th className="px-3 py-2">ID</th>
               <th className="px-3 py-2">Tên</th>
-              <th className="px-3 py-2">Slug</th>
-              <th className="px-3 py-2">Actions</th>
+              {/* <th className="px-3 py-2">Slug</th> */}
+              <th className="px-3 py-2">Thao tác</th>
             </tr>
           </thead>
           <tbody>
@@ -109,7 +109,7 @@ export default function AdminCategories() {
               <tr key={c.id} className="border-t">
                 <td className="px-3 py-2">{c.id}</td>
                 <td className="px-3 py-2">{c.name}</td>
-                <td className="px-3 py-2">{c.slug}</td>
+                {/* <td className="px-3 py-2">{c.slug}</td> */}
                 <td className="px-3 py-2 flex gap-2">
                   <button onClick={()=>openEdit(c)} className="h-9 px-3 rounded border">Sửa</button>
                   <button onClick={()=>onDelete(c.id)} className="h-9 px-3 rounded bg-red-600 text-white">Xoá</button>

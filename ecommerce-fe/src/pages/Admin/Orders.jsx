@@ -3,11 +3,22 @@ import {
   adminListOrders,
   adminGetOrder,
   adminUpdateOrderStatus,
+  adminDeleteOrder,
 } from "@/api/adminApi";
 import { toast } from "react-toastify";
-import { fmtPrice, fmtVND } from "@/utils/formatCurrency";
+import { fmtPrice } from "@/utils/formatCurrency";
+import OrderDetailModal from "@pages/Order/OrderDetail";
 
-const STATUSES = ["PENDING", "PROCESSING", "SHIPPED", "COMPLETED", "CANCELED"];
+const STATUSES = [
+  "PENDING",
+  "CONFIRMED",
+  "PAID",
+  "PROCESSING",
+  "SHIPPED",
+  "COMPLETED",
+  "FAILED",
+  "CANCELED",
+];
 
 function fmtDate(v) {
   if (!v) return "-";
@@ -17,33 +28,64 @@ function fmtDate(v) {
 
 export default function AdminOrders() {
   const [page, setPage] = useState(1);
-  const [rows, setRows] = useState([]);
   const [size, setSize] = useState(10);
+  const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [filters, setFilters] = useState({
+    from: "",
+    to: "",
+    statusText: "",
+    keyword: "",
+  });
 
-  // Modal
   const [open, setOpen] = useState(false);
   const [order, setOrder] = useState(null);
   const [loadingOrder, setLoadingOrder] = useState(false);
 
-  const load = async (_page = page) => {
+  const load = async (_page = page, _size = size, _filters = filters) => {
     setLoading(true);
     try {
-      const { data } = await adminListOrders(_page); // GET /api/admin/orders?page=
+      const params = {};
+      if (_filters.from) params.from = new Date(_filters.from).toISOString();
+      if (_filters.to) params.to = new Date(_filters.to).toISOString();
+      if (_filters.statusText?.trim())
+        params.statusText = _filters.statusText.trim();
+      if (_filters.keyword?.trim()) params.keyword = _filters.keyword.trim();
+
+      const { data } = await adminListOrders(_page, _size, params);
       const list = data?.content ?? [];
       setRows(list);
-      setSize(data?.size ?? 10);
-      setTotal(data?.totalElements ?? list.length);
+      setSize(data?.size ?? _size);
+      setTotal(data?.totalElements ?? 0);
     } catch (e) {
-      toast.error(e?.response?.data?.message || "Tải danh sách đơn hàng thất bại");
+      toast.error(
+        e?.response?.data?.message || "Tải danh sách đơn hàng thất bại"
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { load(1); }, []);
-  useEffect(() => { load(page); /* eslint-disable-next-line */ }, [page]);
+  useEffect(() => {
+    load(1, size);
+  }, []);
+  useEffect(() => {
+    load(page, size);
+  }, [page, size]);
+
+  const onSubmitFilter = (e) => {
+    e.preventDefault();
+    setPage(1);
+    load(1, size, filters);
+  };
+
+  const onClearFilter = () => {
+    const empty = { from: "", to: "", statusText: "", keyword: "" };
+    setFilters(empty);
+    setPage(1);
+    load(1, size, empty);
+  };
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil((total || 0) / (size || 10))),
@@ -51,12 +93,12 @@ export default function AdminOrders() {
   );
 
   const openDetail = async (id) => {
-    setOpen(true);
     setOrder(null);
     setLoadingOrder(true);
     try {
-      const { data } = await adminGetOrder(id); // GET /api/admin/orders/{id}
+      const { data } = await adminGetOrder(id);
       setOrder(data);
+      setOpen(true);
     } catch (e) {
       toast.error(e?.response?.data?.message || "Tải chi tiết đơn thất bại");
       setOpen(false);
@@ -69,7 +111,7 @@ export default function AdminOrders() {
     try {
       await adminUpdateOrderStatus(row.id, newStatus);
       toast.success("Đã cập nhật trạng thái");
-      load(page);
+      load(page, size);
     } catch (e) {
       toast.error(e?.response?.data?.message || "Cập nhật trạng thái thất bại");
     }
@@ -80,12 +122,23 @@ export default function AdminOrders() {
     try {
       await adminUpdateOrderStatus(order.id, newStatus);
       toast.success("Đã cập nhật trạng thái");
-      // reload modal + list
       const { data } = await adminGetOrder(order.id);
       setOrder(data);
-      load(page);
+      load(page, size);
     } catch (e) {
       toast.error(e?.response?.data?.message || "Cập nhật trạng thái thất bại");
+    }
+  };
+
+  const onDeleteRow = async (row) => {
+    if (!confirm(`Xoá đơn #${row.id}?`)) return;
+    try {
+      await adminDeleteOrder(row.id);
+      toast.success("Đã xoá đơn hàng");
+      if (rows.length === 1 && page > 1) setPage((p) => p - 1);
+      else load(page, size, filters);
+    } catch (e) {
+      toast.error(e?.response?.data?.message || "Xoá đơn thất bại");
     }
   };
 
@@ -99,8 +152,87 @@ export default function AdminOrders() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Quản lý đơn hàng</h1>
-        <div className="text-sm text-gray-600">Tổng: {total} đơn</div>
+        <div className="flex items-center gap-3 text-sm text-gray-600">
+          <span>Tổng: {total} đơn</span>
+          <select
+            value={size}
+            onChange={(e) => {
+              setPage(1);
+              setSize(Number(e.target.value) || 10);
+            }}
+            className="h-9 rounded border px-2"
+            title="Số dòng mỗi trang"
+          >
+            {[5, 10, 15, 20].map((n) => (
+              <option key={n} value={n}>
+                {n}/trang
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
+
+      <form
+        onSubmit={onSubmitFilter}
+        className="bg-white rounded-lg shadow p-3 grid gap-3 md:grid-cols-5"
+      >
+        <div>
+          <label className="block text-xs text-gray-600 mb-1">Từ ngày</label>
+          <input
+            type="datetime-local"
+            value={filters.from}
+            onChange={(e) =>
+              setFilters((f) => ({ ...f, from: e.target.value }))
+            }
+            className="h-10 rounded border px-3 w-full"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-600 mb-1">Đến ngày</label>
+          <input
+            type="datetime-local"
+            value={filters.to}
+            onChange={(e) => setFilters((f) => ({ ...f, to: e.target.value }))}
+            className="h-10 rounded border px-3 w-full"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-600 mb-1">
+            Trạng thái (VN hoặc EN)
+          </label>
+          <input
+            value={filters.statusText}
+            onChange={(e) =>
+              setFilters((f) => ({ ...f, statusText: e.target.value }))
+            }
+            placeholder="vd: Đang xử lý / Đã hủy / PAID"
+            className="h-10 rounded border px-3 w-full"
+          />
+        </div>
+        <div className="md:col-span-2">
+          <label className="block text-xs text-gray-600 mb-1">Từ khóa</label>
+          <input
+            value={filters.keyword}
+            onChange={(e) =>
+              setFilters((f) => ({ ...f, keyword: e.target.value }))
+            }
+            placeholder="Tên KH, SĐT, địa chỉ, ghi chú, (gõ số = tìm ID)"
+            className="h-10 rounded border px-3 w-full"
+          />
+        </div>
+        <div className="md:col-span-5 flex items-center gap-2">
+          <button className="h-10 px-4 rounded bg-blue-600 text-white">
+            Tìm kiếm
+          </button>
+          <button
+            type="button"
+            onClick={onClearFilter}
+            className="h-10 px-4 rounded border"
+          >
+            XOÁ
+          </button>
+        </div>
+      </form>
 
       <div className="overflow-x-auto bg-white rounded-lg shadow">
         <table className="min-w-full">
@@ -109,6 +241,7 @@ export default function AdminOrders() {
               <th className="px-3 py-2">ID</th>
               <th className="px-3 py-2">Ngày đặt</th>
               <th className="px-3 py-2">Người đặt</th>
+              <th className="px-3 py-2">Số điện thoại</th>
               <th className="px-3 py-2">Địa chỉ</th>
               <th className="px-3 py-2">Ghi chú</th>
               <th className="px-3 py-2">Tổng tiền</th>
@@ -118,13 +251,18 @@ export default function AdminOrders() {
           </thead>
           <tbody>
             {!loading && rows?.length === 0 && (
-              <tr><td colSpan={8} className="px-3 py-4 text-center text-gray-500">Không có dữ liệu</td></tr>
+              <tr>
+                <td colSpan={9} className="px-3 py-4 text-center text-gray-500">
+                  Không có dữ liệu
+                </td>
+              </tr>
             )}
             {rows.map((r) => (
               <tr key={r.id} className="border-t">
                 <td className="px-3 py-2">{r.id}</td>
                 <td className="px-3 py-2">{fmtDate(r.orderTime)}</td>
                 <td className="px-3 py-2">{r.userFullName || "-"}</td>
+                <td className="px-3 py-2">{r.phoneNumber || "-"}</td>
                 <td className="px-3 py-2">{r.shippingAddress || "-"}</td>
                 <td className="px-3 py-2">{r.note || "-"}</td>
                 <td className="px-3 py-2">{fmtPrice(r.totalPrice)} đ</td>
@@ -133,23 +271,49 @@ export default function AdminOrders() {
                     value={r.status}
                     onChange={(e) => onChangeStatusRow(r, e.target.value)}
                     className="h-9 rounded border px-2"
+                    title={r.statusLabel || r.status}
                   >
-                    {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                    {STATUSES.map((s) => (
+                      <option key={s} value={s}>
+                        {{
+                          PENDING: "Chờ xử lý",
+                          CONFIRMED: "Đã xác nhận",
+                          PAID: "Đã thanh toán",
+                          PROCESSING: "Đang xử lý",
+                          SHIPPED: "Đang giao",
+                          COMPLETED: "Hoàn tất",
+                          FAILED: "Thất bại",
+                          CANCELED: "Đã hủy",
+                        }[s] || s}
+                      </option>
+                    ))}
                   </select>
                 </td>
                 <td className="px-3 py-2">
-                  <button
-                    onClick={() => openDetail(r.id)}
-                    className="h-9 px-3 rounded border"
-                  >
-                    Xem
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => openDetail(r.id)}
+                      className="h-9 px-3 rounded border"
+                    >
+                      Xem
+                    </button>
+                    <button
+                      onClick={() => onDeleteRow(r)}
+                      className="h-9 px-3 rounded bg-red-600 text-white"
+                      title="Xoá đơn hàng"
+                      disabled={loading}
+                    >
+                      Xoá
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
-        {loading && <div className="p-4 text-center text-gray-500">Đang tải...</div>}
+        {loading && (
+          <div className="p-4 text-center text-gray-500">Đang tải...</div>
+        )}
       </div>
 
       <div className="flex items-center gap-2">
@@ -160,7 +324,9 @@ export default function AdminOrders() {
         >
           Trước
         </button>
-        <div className="text-sm">Trang {page}/{totalPages}</div>
+        <div className="text-sm">
+          Trang {page}/{totalPages}
+        </div>
         <button
           disabled={page >= totalPages}
           onClick={() => setPage((p) => p + 1)}
@@ -170,96 +336,12 @@ export default function AdminOrders() {
         </button>
       </div>
 
-      {/* MODAL chi tiết đơn hàng (kèm ảnh sản phẩm) */}
-      {open && (
-        <div className="fixed inset-0 bg-black/30 grid place-items-center p-4 z-50">
-          <div className="bg-white w-[960px] max-w-[95vw] rounded-xl p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold">Đơn #{order?.id}</h2>
-              <button onClick={() => setOpen(false)} className="h-9 px-3 rounded border">Đóng</button>
-            </div>
-
-            {loadingOrder && <div className="p-3 text-gray-500">Đang tải chi tiết...</div>}
-
-            {!loadingOrder && order && (
-              <>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="bg-gray-50 rounded p-3 space-y-1">
-                    <div className="font-semibold">Khách hàng</div>
-                    <div>Tên: {order.userFullName || "-"}</div>
-                    <div>Email: -</div>
-                    <div>Địa chỉ: {order.shippingAddress || "-"}</div>
-                    <div>Điện thoại: -</div>
-                  </div>
-                  <div className="bg-gray-50 rounded p-3 space-y-1">
-                    <div className="font-semibold">Thông tin đơn</div>
-                    <div>Trạng thái: <b>{order.status}</b></div>
-                    <div>Tổng tiền: {fmtPrice(order.totalPrice ?? computedTotal)} đ</div>
-                    <div>Ngày đặt: {fmtDate(order.orderTime)}</div>
-                  </div>
-                </div>
-
-                <div className="overflow-x-auto border rounded mt-4">
-                  <table className="min-w-full">
-                    <thead className="bg-gray-50 text-sm">
-                      <tr className="text-left">
-                        <th className="px-3 py-2">Sản phẩm</th>
-                        <th className="px-3 py-2">SL</th>
-                        <th className="px-3 py-2">Giá</th>
-                        <th className="px-3 py-2">Thành tiền</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(order.items ?? []).map((it, idx) => (
-                        <tr key={idx} className="border-t">
-                          <td className="px-3 py-2">
-                            <div className="flex items-center gap-3">
-                              <div className="w-12 h-12 rounded bg-gray-50 border overflow-hidden shrink-0">
-                                {it.image && (
-                                  <img
-                                    src={`/product-image/${it.productId}/${encodeURIComponent(it.image)}`}
-                                    alt=""
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => (e.currentTarget.style.display = "none")}
-                                  />
-                                )}
-                              </div>
-                              <div className="font-medium">{it.productName}</div>
-                            </div>
-                          </td>
-                          <td className="px-3 py-2">{it.quantity}</td>
-                          <td className="px-3 py-2">{fmtPrice(it.price)} đ</td>
-                          <td className="px-3 py-2">
-                            {fmtPrice(Number(it.price || 0) * Number(it.quantity || 0))} đ
-                          </td>
-                        </tr>
-                      ))}
-                      {(!order.items || order.items.length === 0) && (
-                        <tr>
-                          <td colSpan={4} className="px-3 py-4 text-center text-gray-500">
-                            Không có sản phẩm
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="mt-3 flex items-center justify-end gap-2">
-                  <div>Đổi trạng thái:&nbsp;</div>
-                  <select
-                    value={order.status}
-                    onChange={(e) => onChangeStatusInModal(e.target.value)}
-                    className="h-9 rounded border px-2"
-                  >
-                    {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+      <OrderDetailModal
+        open={open}
+        onClose={() => setOpen(false)}
+        data={order}
+        onChangeStatus={onChangeStatusInModal}
+      />
     </div>
   );
 }

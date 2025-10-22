@@ -5,7 +5,8 @@ import Register from "@pages/Auth/Register";
 
 import ProductList from "@pages/Product/ProductList";
 import ProductDetail from "@pages/Product/ProductDetail";
-import ProductForm from "@pages/Product/ProductForm";
+import SearchPage from "@pages/Product/SearchPage";
+import CategoryPage from "@pages/Product/CategoryPage";
 
 import Cart from "@pages/Cart";
 import Checkout from "@pages/Checkout";
@@ -18,12 +19,15 @@ import Profile from "@pages/User/Profile";
 import AdminProducts from "@pages/Admin/Products";
 import AdminUsers from "@pages/Admin/Users";
 import AdminStaffs from "@pages/Admin/Staffs";
-import AdminCategories from "@pages/admin/Categories";
+import AdminCategories from "@pages/Admin/Categories";
 import AdminOrders from "@pages/Admin/Orders";
+import AdminStats from "@pages/Admin/AdminStats";
 
 import MainLayout from "@layouts/MainLayout";
 import AdminLayout from "@layouts/AdminLayout";
 import AuthLayout from "@layouts/AuthLayout";
+import VnpayReturnPage from "@/pages/Checkout";
+import VnpayResultPage from "@pages/Checkout/VnpayResult";
 
 
 export const publicRoutes = [
@@ -39,6 +43,9 @@ export const publicRoutes = [
   { path: "/checkout", element: <Checkout />, denyRoles: ["admin", "staff"] },
 
   { path: "/profile", element: <Profile />, roles: ["user"] },
+  { path: "/search", element: <SearchPage />, layout: MainLayout },
+  { path: "/category/:id", element: <CategoryPage />, layout: MainLayout },
+  { path: "/payment/vnpay-result", element: <VnpayResultPage />, layout: MainLayout }
 ];
 
 
@@ -73,11 +80,16 @@ export const privateRoutes = [
     roles: ["ROLE_ADMIN","ROLE_STAFF"],
     layout: AdminLayout,
   },
+  { path: "/admin/stats", 
+    element: <AdminStats /> , 
+    roles: ["ROLE_ADMIN","ROLE_STAFF"], 
+    layout: AdminLayout 
+  },
   { path: "/cart",
     element: <Cart />,
     roles: ["ROLE_USER"] 
   },
   { path: "/orders", element: <OrderList /> , roles: ["ROLE_USER"] },
   { path: "/orders/:id", element: <OrderDetail /> , roles: ["ROLE_USER"] },
-
+  { path: "/payment/vnpay-return", element: <VnpayReturnPage /> , roles: ["ROLE_USER"] },
 ];

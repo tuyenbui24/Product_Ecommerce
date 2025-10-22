@@ -42,7 +42,7 @@ export default function AdminUsers() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Quản lý User</h1>
+        <h1 className="text-2xl font-bold">Quản lý Người dùng</h1>
       </div>
 
       <form onSubmit={onSearch} className="flex gap-2">

@@ -1,130 +1,78 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { createOrderCOD } from "@/api/orderApi";
+import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { payAgainVnpay } from "@/api/orderApi";
 import { toast } from "react-toastify";
-// import { useSelector } from "react-redux";
 
-export default function CheckoutPage() {
+export default function VnpayReturnPage() {
+  const location = useLocation();
   const navigate = useNavigate();
-  // const { items, totalPrice } = useSelector((s) => s.cart);
-  const [shippingAddress, setShippingAddress] = useState("");
-  const [note, setNote] = useState("");
-  const [method, setMethod] = useState("COD"); // "COD" | "VNPAY"
-  const [submitting, setSubmitting] = useState(false);
+  const qs = useMemo(() => new URLSearchParams(location.search), [location.search]);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    if (!shippingAddress.trim()) {
-      toast.error("Vui lòng nhập địa chỉ giao hàng.");
-      return;
-    }
-    if (method !== "COD") {
-      toast.info("Thanh toán VNPAY sẽ làm sau. Vui lòng chọn COD.");
-      return;
-    }
+  const rsp = qs.get("vnp_ResponseCode");
+  const orderId = qs.get("vnp_TxnRef");
+  const txnNo = qs.get("vnp_TransactionNo");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // có thể gọi BE /payments/vnpay/return (GET) để verify chữ ký nếu muốn hiển thị thêm
+  }, []);
+
+  const payAgain = async () => {
     try {
-      setSubmitting(true);
-      const res = await createOrderCOD({ shippingAddress, note });
-      toast.success("Đặt hàng thành công (COD)!");
-      // Điều hướng về danh sách đơn hoặc trang chi tiết đơn
-      navigate("/orders"); // hoặc `/orders/${res.data.id}`
-    } catch (err) {
-      const msg = err?.response?.data?.message || "Đặt hàng thất bại.";
-      toast.error(msg);
+      setLoading(true);
+      const url = await payAgainVnpay(orderId);
+      window.location.href = url;
+    } catch (e) {
+      toast.error(e?.response?.data?.message || "Không tạo được URL thanh toán.");
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
-  }
+  };
+
+  const isSuccess = rsp === "00";
 
   return (
-    <div className="mx-auto max-w-5xl p-4 md:p-6">
-      <h1 className="text-2xl font-semibold mb-4">Thanh toán</h1>
+    <div className="max-w-xl mx-auto p-6">
+      <h1 className="text-2xl font-bold mb-3">Kết quả thanh toán VNPAY</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <form onSubmit={handleSubmit} className="md:col-span-2 space-y-6">
-          <div className="rounded-2xl shadow p-4 md:p-6 bg-white">
-            <h2 className="text-lg font-semibold mb-4">Thông tin giao hàng</h2>
-            <label className="block text-sm font-medium mb-1">Địa chỉ *</label>
-            <input
-              value={shippingAddress}
-              onChange={(e) => setShippingAddress(e.target.value)}
-              className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="Ví dụ: Số 123, Đường ABC, Quận XYZ, TP. HCM"
-            />
-
-            <label className="block text-sm font-medium mt-4 mb-1">Ghi chú</label>
-            <textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              className="w-full rounded-xl border px-3 py-2 min-h-[90px] outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="Ghi chú cho người giao hàng (không bắt buộc)"
-            />
+      {isSuccess ? (
+        <div className="rounded border p-4 bg-green-50">
+          <div className="font-semibold text-green-700">Thanh toán thành công!</div>
+          <div className="mt-2 text-sm">
+            Mã đơn hàng: <b>#{orderId}</b><br/>
+            Mã giao dịch cổng: <b>{txnNo || "-"}</b>
+          </div>
+          <button
+            className="mt-4 h-10 px-4 rounded bg-indigo-600 text-white"
+            onClick={() => navigate("/orders")}
+          >
+            Xem đơn hàng
+          </button>
+        </div>
+      ) : (
+        <div className="rounded border p-4 bg-amber-50">
+          <div className="font-semibold text-amber-700">Thanh toán chưa thành công.</div>
+          <div className="mt-2 text-sm">
+            Mã phản hồi: <b>{rsp || "-"}</b> &nbsp;|&nbsp; Đơn hàng: <b>#{orderId}</b>
           </div>
 
-          <div className="rounded-2xl shadow p-4 md:p-6 bg-white">
-            <h2 className="text-lg font-semibold mb-4">Phương thức thanh toán</h2>
-
-            <div className="space-y-3">
-              <label className="flex items-center gap-3 p-3 rounded-xl border cursor-pointer hover:bg-gray-50">
-                <input
-                  type="radio"
-                  name="method"
-                  value="COD"
-                  checked={method === "COD"}
-                  onChange={() => setMethod("COD")}
-                />
-                <div>
-                  <div className="font-medium">Thanh toán khi nhận hàng (COD)</div>
-                  <div className="text-sm text-gray-500">
-                    Bạn sẽ trả tiền mặt khi nhận hàng.
-                  </div>
-                </div>
-              </label>
-
-              <label className="flex items-center gap-3 p-3 rounded-xl border opacity-60 cursor-not-allowed">
-                <input type="radio" name="method" value="VNPAY" disabled />
-                <div>
-                  <div className="font-medium">Thanh toán qua VNPAY</div>
-                  <div className="text-sm text-gray-500">Sắp có</div>
-                </div>
-              </label>
-            </div>
-
+          <div className="mt-4 flex gap-2">
             <button
-              type="submit"
-              disabled={submitting}
-              className="mt-6 w-full md:w-auto px-5 py-2.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60"
+              className="h-10 px-4 rounded bg-amber-500 text-white disabled:opacity-60"
+              disabled={loading}
+              onClick={payAgain}
             >
-              {submitting ? "Đang đặt hàng..." : "Đặt hàng (COD)"}
+              {loading ? "Đang tạo lại link..." : "Thanh toán lại qua VNPAY"}
+            </button>
+            <button
+              className="h-10 px-4 rounded border"
+              onClick={() => navigate("/orders")}
+            >
+              Về danh sách đơn hàng
             </button>
           </div>
-        </form>
-
-        <aside className="md:col-span-1">
-          <div className="rounded-2xl shadow p-4 md:p-6 bg-white">
-            <h3 className="text-lg font-semibold mb-4">Tóm tắt đơn hàng</h3>
-
-            {/* Nếu có cartSlice: render danh sách items + tổng */}
-            {/* <ul className="space-y-2">
-              {items.map(it => (
-                <li key={it.productId} className="flex justify-between text-sm">
-                  <span>{it.productName} x{it.quantity}</span>
-                  <span>{it.price.toLocaleString("vi-VN")}₫</span>
-                </li>
-              ))}
-            </ul>
-            <div className="mt-3 border-t pt-3 flex justify-between font-semibold">
-              <span>Tổng cộng</span>
-              <span>{Number(totalPrice||0).toLocaleString("vi-VN")}₫</span>
-            </div> */}
-
-            {/* Nếu chưa có cartSlice, tạm thời để note: */}
-            <p className="text-sm text-gray-500">
-              (Gắn dữ liệu giỏ hàng thật từ Redux sau—danh sách món + tổng tiền)
-            </p>
-          </div>
-        </aside>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
