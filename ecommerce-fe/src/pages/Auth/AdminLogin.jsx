@@ -27,7 +27,7 @@ export default function AdminLogin() {
         <h1 className="text-3xl font-bold text-center text-amber-500 mb-6">Đăng nhập Admin</h1>
 
         {error && <div className="mb-4 rounded bg-red-50 text-red-700 px-3 py-2 text-sm">
-          {error.message || "Đăng nhập thất bại"}
+          {error.message || "Email hoặc mật khẩu của bạn không đúng"}
         </div>}
 
         <form onSubmit={onSubmit} className="grid gap-4">

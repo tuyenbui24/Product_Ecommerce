@@ -4,12 +4,13 @@ import { Eye, EyeOff } from "lucide-react";
 import { registerUser } from "@/api/authApi";
 import { toast } from "react-toastify";
 
+const GMAIL_REGEX = /^[A-Za-z0-9._%+-]+@gmail\.com$/;
+
 export default function Register() {
   const navigate = useNavigate();
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
-  const [okMsg, setOkMsg] = useState("");
 
   const [form, setForm] = useState({
     firstName: "",
@@ -18,18 +19,78 @@ export default function Register() {
     password: "",
   });
 
-  const onChange = (e) => setForm((s) => ({ ...s, [e.target.name]: e.target.value }));
+  const onChange = (e) =>
+    setForm((s) => ({ ...s, [e.target.name]: e.target.value }));
+
+  const onInvalid = (e) => {
+    const el = e.target;
+    el.setCustomValidity("");
+
+    if (el.validity.valueMissing) {
+      el.setCustomValidity("Vui lòng điền thông tin này.");
+    } else if (el.name === "email") {
+      if (el.validity.typeMismatch) {
+        el.setCustomValidity("Email không hợp lệ.");
+      } else if (el.validity.patternMismatch) {
+        el.setCustomValidity("Email phải kết thúc bằng @gmail.com.");
+      }
+    } else if (el.name === "password" && el.validity.tooShort) {
+      el.setCustomValidity("Mật khẩu tối thiểu 6 ký tự.");
+    }
+  };
+
+  const onInput = (e) => e.target.setCustomValidity("");
+
+  
+  function parseError(error) {
+    const data = error?.response?.data;
+
+    
+    if (typeof data === "string") return data;
+
+    
+    if (data && typeof data === "object") {
+      if (data.errors && data.errors.email) return data.errors.email;
+      if (data.email) return data.email; 
+      if (data.message) return data.message;
+    }
+
+    
+    if (error?.response?.status === 400) return "Email không hợp lệ.";
+
+    
+    return "Có lỗi xảy ra. Vui lòng thử lại.";
+  }
 
   const onSubmit = async (e) => {
     e.preventDefault();
     setErr("");
+
+    
+    const payload = {
+      ...form,
+      email: (form.email || "").trim().toLowerCase(),
+      firstName: (form.firstName || "").trim(),
+      lastName: (form.lastName || "").trim(),
+    };
+
+    if (!GMAIL_REGEX.test(payload.email)) {
+      setErr("Email không hợp lệ (phải kết thúc bằng @gmail.com).");
+      return;
+    }
+
+    if (!payload.firstName || !payload.lastName) {
+      setErr("Vui lòng nhập đầy đủ Họ và Tên.");
+      return;
+    }
+
     setLoading(true);
     try {
-      const res = await registerUser(form);
+      await registerUser(payload);
       toast.success("Đăng ký thành công!");
-      setTimeout(() => navigate("/login"), 1500);
+      setTimeout(() => navigate("/login"), 1000);
     } catch (error) {
-      setErr(error.response?.data?.message || "Đăng ký thất bại");
+      setErr(parseError(error));
     } finally {
       setLoading(false);
     }
@@ -55,6 +116,8 @@ export default function Register() {
               name="lastName"
               value={form.lastName}
               onChange={onChange}
+              onInvalid={onInvalid}
+              onInput={onInput}
               placeholder="Họ"
               className="w-full h-11 rounded-lg border px-3 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
               required
@@ -67,6 +130,8 @@ export default function Register() {
               name="firstName"
               value={form.firstName}
               onChange={onChange}
+              onInvalid={onInvalid}
+              onInput={onInput}
               placeholder="Tên"
               className="w-full h-11 rounded-lg border px-3 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
               required
@@ -80,7 +145,14 @@ export default function Register() {
               name="email"
               value={form.email}
               onChange={onChange}
-              placeholder="you@example.com"
+              onBlur={(e) => {
+                e.target.value = e.target.value.trim().toLowerCase();
+                setForm((s) => ({ ...s, email: e.target.value }));
+              }}
+              pattern="^[A-Za-z0-9._%+-]+@gmail\.com$"
+              onInvalid={onInvalid}
+              onInput={onInput}
+              placeholder="you@gmail.com"
               className="w-full h-11 rounded-lg border px-3 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
               required
             />
@@ -94,6 +166,8 @@ export default function Register() {
                 name="password"
                 value={form.password}
                 onChange={onChange}
+                onInvalid={onInvalid}
+                onInput={onInput}
                 placeholder="••••••••"
                 className="w-full h-11 rounded-lg border px-3 pr-12 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                 required
@@ -120,7 +194,7 @@ export default function Register() {
         </form>
 
         <p className="text-center text-sm mt-4">
-          Bạn đã có tài khoản?
+          Bạn đã có tài khoản?{" "}
           <Link to="/login" className="text-blue-600 font-semibold hover:underline">
             Đăng nhập
           </Link>

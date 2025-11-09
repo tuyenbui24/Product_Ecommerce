@@ -21,6 +21,26 @@ function buildImageUrl(p) {
   return `/product-image/${p.id}/${encodeURIComponent(p.image)}`;
 }
 
+function parseApiError(err) {
+  const data = err?.response?.data;
+  if (typeof data === "string") return { _general: data };
+
+  if (data && typeof data === "object") {
+    if (data.errors && typeof data.errors === "object") return { ...data.errors };
+    const keys = Object.keys(data);
+    if (keys.length && typeof data[keys[0]] === "string") {
+      return { [keys[0]]: data[keys[0]] };
+    }
+    if (data.message) return { _general: data.message };
+  }
+
+  if (err?.response?.status === 400 || err?.response?.status === 409) {
+    
+    return { name: "Tên sản phẩm đã tồn tại" };
+  }
+  return { _general: "Có lỗi xảy ra. Vui lòng thử lại." };
+}
+
 export default function AdminProducts() {
   const [kw, setKw] = useState("");
   const [page, setPage] = useState(1);
@@ -33,6 +53,8 @@ export default function AdminProducts() {
   const [catFilter, setCatFilter] = useState("");
 
   const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [formErrs, setFormErrs] = useState({}); 
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({
     name: "",
@@ -52,7 +74,7 @@ export default function AdminProducts() {
   const [minStock, setMinStock] = useState("");
   const [maxStock, setMaxStock] = useState("");
 
-  // ===== LOAD DATA =====
+  
   const load = async (_page = page) => {
     setLoading(true);
     try {
@@ -125,7 +147,7 @@ export default function AdminProducts() {
     })();
   }, [rows]);
 
-  // ===== ACTIONS =====
+  
   const onSearch = (e) => {
     e.preventDefault();
     setPage(1);
@@ -157,6 +179,7 @@ export default function AdminProducts() {
       categoryId: catFilter || cats?.[0]?.id || "",
       description: "",
     });
+    setFormErrs({});
     setOpen(true);
   };
 
@@ -169,16 +192,36 @@ export default function AdminProducts() {
       categoryId: p.category?.id ?? p.categoryId ?? "",
       description: p.description ?? "",
     });
+    setFormErrs({});
     setOpen(true);
   };
 
   const onSave = async (e) => {
     e.preventDefault();
-    if (!form.name?.trim()) return toast.error("Tên sản phẩm không được để trống");
-    if (!form.price || Number(form.price) <= 0) return toast.error("Giá phải > 0");
-    if (form.quantity === "" || Number.isNaN(Number(form.quantity)) || Number(form.quantity) < 0)
-      return toast.error("Số lượng không hợp lệ");
-    if (!form.categoryId) return toast.error("Vui lòng chọn danh mục");
+    setFormErrs({});
+    setSaving(true);
+
+    
+    if (!form.name?.trim()) {
+      setFormErrs({ name: "Tên sản phẩm không được để trống" });
+      setSaving(false);
+      return;
+    }
+    if (!form.price || Number(form.price) <= 0) {
+      setFormErrs({ price: "Giá phải lớn hơn 0" });
+      setSaving(false);
+      return;
+    }
+    if (form.quantity === "" || Number.isNaN(Number(form.quantity)) || Number(form.quantity) < 0) {
+      setFormErrs({ quantity: "Số lượng không hợp lệ" });
+      setSaving(false);
+      return;
+    }
+    if (!form.categoryId) {
+      setFormErrs({ categoryId: "Vui lòng chọn danh mục" });
+      setSaving(false);
+      return;
+    }
 
     const payload = {
       name: form.name.trim(),
@@ -204,7 +247,11 @@ export default function AdminProducts() {
         load(page);
       }
     } catch (e) {
-      toast.error(e?.response?.data?.message || "Lưu sản phẩm thất bại");
+      const errs = parseApiError(e);
+      setFormErrs(errs);
+      toast.error(errs._general || errs.name || "Lưu sản phẩm thất bại");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -299,12 +346,14 @@ export default function AdminProducts() {
     }
   };
 
-  const totalPages = useMemo(() => Math.max(1, Math.ceil((total || 0) / (size || 10))), [total, size]);
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil((total || 0) / (size || 10))),
+    [total, size]
+  );
 
-  // ===== RENDER =====
+  
   return (
     <div className="space-y-4">
-      {/* HEADER + FILTER */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Quản lý Sản phẩm</h1>
         <div className="flex items-center gap-2">
@@ -347,7 +396,6 @@ export default function AdminProducts() {
         </div>
       </div>
 
-      {/* SEARCH + STOCK FILTER */}
       <div className="flex flex-wrap items-center gap-2">
         <form onSubmit={onSearch} className="flex gap-2 items-center">
           <input value={kw} onChange={(e) => setKw(e.target.value)} placeholder="Tìm theo tên..." className="h-10 rounded border px-3" />
@@ -369,7 +417,6 @@ export default function AdminProducts() {
         </form>
       </div>
 
-      {/* TABLE */}
       <div className="overflow-x-auto bg-white rounded-lg shadow">
         <table className="min-w-full">
           <thead className="bg-gray-50 text-sm">
@@ -437,9 +484,7 @@ export default function AdminProducts() {
                   <td className="px-3 py-2">
                     <button
                       onClick={() => toggleEnabled(p)}
-                      className={`h-8 px-3 rounded ${
-                        p.enabled ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-700"
-                      }`}
+                      className={`h-8 px-3 rounded ${p.enabled ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-700"}`}
                     >
                       {p.enabled ? "Đang bán" : "Ngừng bán"}
                     </button>
@@ -460,7 +505,6 @@ export default function AdminProducts() {
         {loading && <div className="p-4 text-center text-gray-500">Đang tải...</div>}
       </div>
 
-      {/* PAGINATION */}
       <div className="flex items-center gap-2">
         <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="h-9 px-3 rounded border disabled:opacity-60">
           Trước
@@ -473,31 +517,58 @@ export default function AdminProducts() {
         </button>
       </div>
 
-      {/* MODAL THÊM/SỬA */}
       {open && (
         <div className="fixed inset-0 bg-black/30 grid place-items-center p-4 z-50">
           <form onSubmit={onSave} className="bg-white w-[620px] max-w-[95vw] rounded-xl p-5 grid gap-3">
             <h2 className="text-lg font-semibold">{editing ? "Sửa sản phẩm" : "Thêm sản phẩm"}</h2>
 
+            {!!formErrs._general && (
+              <div className="mb-1 rounded bg-red-50 text-red-700 px-3 py-2 text-sm">
+                {formErrs._general}
+              </div>
+            )}
+
             <div>
               <label className="block text-sm mb-1">Tên</label>
-              <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="h-11 rounded border px-3 w-full" required />
+              <input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                className={`h-11 rounded border px-3 w-full ${formErrs.name ? "border-red-500" : ""}`}
+                required
+              />
+              {formErrs.name && <p className="mt-1 text-xs text-red-600">{formErrs.name}</p>}
             </div>
 
             <div className="grid md:grid-cols-3 gap-3">
               <div>
                 <label className="block text-sm mb-1">Giá</label>
-                <input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className="h-11 rounded border px-3 w-full" required min={0} />
+                <input
+                  type="number"
+                  value={form.price}
+                  onChange={(e) => setForm({ ...form, price: e.target.value })}
+                  className={`h-11 rounded border px-3 w-full ${formErrs.price ? "border-red-500" : ""}`}
+                  required
+                  min={0}
+                />
+                {formErrs.price && <p className="mt-1 text-xs text-red-600">{formErrs.price}</p>}
               </div>
               <div>
                 <label className="block text-sm mb-1">Số lượng</label>
-                <input type="number" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} className="h-11 rounded border px-3 w-full" required min={0} />
+                <input
+                  type="number"
+                  value={form.quantity}
+                  onChange={(e) => setForm({ ...form, quantity: e.target.value })}
+                  className={`h-11 rounded border px-3 w-full ${formErrs.quantity ? "border-red-500" : ""}`}
+                  required
+                  min={0}
+                />
+                {formErrs.quantity && <p className="mt-1 text-xs text-red-600">{formErrs.quantity}</p>}
               </div>
               <div>
                 <label className="block text-sm mb-1">Danh mục</label>
                 <Listbox value={String(form.categoryId)} onChange={(v) => setForm({ ...form, categoryId: v })}>
                   <div className="relative">
-                    <Listbox.Button className="h-11 w-full rounded border px-3 text-left bg-white">
+                    <Listbox.Button className={`h-11 w-full rounded border px-3 text-left bg-white ${formErrs.categoryId ? "border-red-500" : ""}`}>
                       {cats.find((c) => String(c.id) === String(form.categoryId))?.name || "-- Chọn danh mục --"}
                     </Listbox.Button>
                     <Transition as={Fragment} leave="transition ease-in duration-100" leaveFrom="opacity-100" leaveTo="opacity-0">
@@ -513,26 +584,34 @@ export default function AdminProducts() {
                     </Transition>
                   </div>
                 </Listbox>
+                {formErrs.categoryId && <p className="mt-1 text-xs text-red-600">{formErrs.categoryId}</p>}
               </div>
             </div>
 
             <div>
               <label className="block text-sm mb-1">Mô tả</label>
-              <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="rounded border px-3 py-2 w-full min-h-[96px]" />
+              <textarea
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                className="rounded border px-3 py-2 w-full min-h-[96px]"
+              />
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
               <button type="button" onClick={() => setOpen(false)} className="h-10 px-4 rounded border">
                 Huỷ
               </button>
-              <button className="h-10 px-4 rounded bg-blue-600 text-white">{editing ? "Lưu" : "Tạo mới"}</button>
+              <button disabled={saving} className="h-10 px-4 rounded bg-blue-600 text-white disabled:opacity-60">
+                {saving ? "Đang lưu..." : editing ? "Lưu" : "Tạo mới"}
+              </button>
             </div>
-            <p className="text-xs text-gray-500">* Ảnh sản phẩm tải qua nút <b>Upload ảnh</b> trong bảng.</p>
+            <p className="text-xs text-gray-500">
+              * Ảnh sản phẩm tải qua nút <b>Upload ảnh</b> trong bảng.
+            </p>
           </form>
         </div>
       )}
 
-      {/* MODAL SIZE */}
       {sizeOpen && sizeProduct && (
         <div className="fixed inset-0 bg-black/30 grid place-items-center p-4 z-50">
           <div className="bg-white w-[720px] max-w-[95vw] rounded-xl p-5 grid gap-3">
@@ -607,7 +686,13 @@ export default function AdminProducts() {
             </div>
 
             <form onSubmit={onAddSize} className="mt-2 grid grid-cols-[1fr_1fr_auto] gap-2">
-              <input placeholder="Size (VD: S, M, L)" value={sizeForm.size} onChange={(e) => setSizeForm({ ...sizeForm, size: e.target.value })} className="h-10 rounded border px-3" required />
+              <input
+                placeholder="Size (VD: S, M, L)"
+                value={sizeForm.size}
+                onChange={(e) => setSizeForm({ ...sizeForm, size: e.target.value })}
+                className="h-10 rounded border px-3"
+                required
+              />
               <input
                 type="number"
                 placeholder="Số lượng"
@@ -617,8 +702,8 @@ export default function AdminProducts() {
                 className="h-10 rounded border px-3"
                 required
               />
-              <button disabled={savingSize} className="h-10 px-4 rounded bg-emerald-600 text-white">
-                Thêm size
+              <button disabled={savingSize} className="h-10 px-4 rounded bg-emerald-600 text-white disabled:opacity-60">
+                {savingSize ? "Đang thêm..." : "Thêm size"}
               </button>
             </form>
           </div>
