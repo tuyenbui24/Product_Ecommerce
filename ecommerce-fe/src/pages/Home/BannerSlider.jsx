@@ -31,7 +31,6 @@ export default function BannerSlider() {
         effect="slide"
         speed={800}
         centeredSlides={false}
-        // ✅ Responsive height, không méo ảnh
         className="relative h-[180px] sm:h-[240px] md:h-[300px] lg:h-[380px]"
         breakpoints={{
           0: { slidesPerView: 1, spaceBetween: 10 },

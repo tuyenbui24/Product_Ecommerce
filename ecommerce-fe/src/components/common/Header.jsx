@@ -23,7 +23,6 @@ export default function Header() {
   const dispatch = useDispatch();
   const { pathname } = useLocation();
 
-  // ❗ Ẩn header ở khu vực admin
   const isAdminArea = pathname.startsWith("/admin");
   if (isAdminArea) return null;
 
@@ -36,7 +35,6 @@ export default function Header() {
     return Array.isArray(s.cart?.items) ? s.cart.items.length : 0;
   });
 
-  // ⚙️ Quyền người dùng
   const rawRoles = user?.roles ?? user?.authorities ?? [];
   const normRoles = useMemo(() => {
     return (rawRoles || [])
@@ -49,13 +47,11 @@ export default function Header() {
   const isStaff = hasRole("STAFF");
   const isManager = isAdmin || isStaff;
 
-  // 🔑 Đăng xuất
   const onLogout = async () => {
     await dispatch(logoutThunk());
     navigate("/", { replace: true });
   };
 
-  // 🔍 Tìm kiếm
   const [q, setQ] = useState("");
   const onSearch = (e) => {
     e.preventDefault();
@@ -67,7 +63,6 @@ export default function Header() {
     navigate(`/search?${params}`);
   };
 
-  // 📂 Danh mục
   const [cates, setCates] = useState([]);
   const [loadingCates, setLoadingCates] = useState(false);
   useEffect(() => {
@@ -102,7 +97,6 @@ export default function Header() {
     return groups;
   }, [cates]);
 
-  // 📱 Menu mobile
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(null);
   const mobileRef = useRef(null);
@@ -118,7 +112,6 @@ export default function Header() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  // Menu danh mục desktop
   const MenuGroup = ({ label, items, colorClass }) => (
     <div className="relative group hidden md:block">
       <button
@@ -149,9 +142,7 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 bg-gradient-to-b from-yellow-100 to-white shadow">
       <div className="max-w-7xl mx-auto px-4 relative">
-        {/* Hàng đầu */}
         <div className="h-16 flex items-center justify-between gap-4">
-          {/* Nút menu mobile */}
           <button
             onClick={() => setMobileOpen((p) => !p)}
             className="md:hidden text-gray-700"
@@ -159,12 +150,10 @@ export default function Header() {
             {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
 
-          {/* Logo */}
           <Link to="/" aria-label="Trang chủ" className="flex items-center gap-3">
             <img src={logo} alt="Logo" className="h-10 w-auto" />
           </Link>
 
-          {/* Ô tìm kiếm */}
           <form
             onSubmit={onSearch}
             className="relative flex-1 max-w-xl hidden sm:block"
@@ -184,7 +173,6 @@ export default function Header() {
             </button>
           </form>
 
-          {/* Giỏ hàng + User */}
           <div className="flex items-center gap-5">
             <Link to="/cart" className="relative" aria-label="Giỏ hàng">
               <ShoppingCart className="w-6 h-6 text-gray-700" />
@@ -195,7 +183,6 @@ export default function Header() {
               )}
             </Link>
 
-            {/* User */}
             {!isAuthPage && (
               <>
                 {!isAuthenticated ? (
@@ -244,7 +231,6 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Menu desktop */}
         <div className="h-10 hidden md:flex items-center justify-between">
           <nav className="flex items-center gap-8 text-sm font-semibold">
             <MenuGroup label="NAM" items={grouped["NAM"]} colorClass="text-red-700" />
@@ -253,7 +239,6 @@ export default function Header() {
           </nav>
         </div>
 
-        {/* MENU MOBILE (drop bar responsive) */}
         {mobileOpen && (
           <div
             ref={mobileRef}
@@ -287,7 +272,6 @@ export default function Header() {
               </div>
             ))}
 
-            {/* Info cá nhân ở mobile */}
             <div className="p-3 border-t border-yellow-300">
               {!isAuthenticated ? (
                 <div className="space-x-2 text-sm">

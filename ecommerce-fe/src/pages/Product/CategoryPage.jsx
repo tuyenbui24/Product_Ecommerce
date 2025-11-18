@@ -31,7 +31,7 @@ export default function CategoryPage() {
     }
   };
 
-  useEffect(() => { load(page, size); /* eslint-disable-line */ }, [id, page, size]);
+  useEffect(() => { load(page, size);}, [id, page, size]);
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil((total || 0) / (size || 12))),

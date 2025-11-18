@@ -1,6 +1,4 @@
 import ProductCard from "@components/product/ProductCard";
-// hoặc thêm ProductGrid nếu muốn wrap grid:
-// import ProductGrid from "@components/product/ProductGrid";
 
 export default function ProductList() {
   return (

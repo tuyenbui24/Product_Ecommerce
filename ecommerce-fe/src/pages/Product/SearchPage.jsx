@@ -26,7 +26,7 @@ export default function SearchPage() {
     }
   };
 
-  useEffect(() => { load(page, size, q); /* eslint-disable-line */ }, [q, page, size]);
+  useEffect(() => { load(page, size, q); }, [q, page, size]);
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil((total || 0) / (size || 12))),

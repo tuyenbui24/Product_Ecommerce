@@ -4,7 +4,6 @@ import { getToken, setToken, removeToken, getUser, setUser, removeUser } from "@
 
 export const loginUserThunk = createAsyncThunk("auth/loginUser", async (payload, { rejectWithValue }) => {
   try {
-    // BE trả JwtResponse { token, id, email, firstName, lastName, roles: [...] }
     const { data } = await authApi.loginUser(payload);
     const { token, ...user } = data;
     setToken(token);
@@ -27,7 +26,6 @@ export const loginStaffThunk = createAsyncThunk("auth/loginStaff", async (payloa
   }
 });
 
-/** Load lại hồ sơ sau F5 (khi đã có token) */
 export const fetchMeThunk = createAsyncThunk("auth/me", async (_, { rejectWithValue }) => {
   try {
     const { data } = await authApi.me();
