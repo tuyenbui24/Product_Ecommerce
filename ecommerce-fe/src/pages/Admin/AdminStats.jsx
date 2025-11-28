@@ -20,6 +20,7 @@ import { fmtPrice } from "@/utils/formatCurrency";
 function toIsoOrNull(v) {
   return v ? new Date(v).toISOString() : null;
 }
+
 function fmtDate(v) {
   if (!v) return "-";
   const d = new Date(v);
@@ -38,21 +39,26 @@ function fmtWeekBucket(bucket) {
   return `${monthStr}/${year} - Tuần ${weekInMonth}`;
 }
 
+function getDefaultFrom() {
+  const d = new Date();
+  d.setDate(d.getDate() - 30); // lùi 30 ngày
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 16);
+}
+
+function getDefaultTo() {
+  const d = new Date();
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 16);
+}
+
 const SHOW_LIMIT = 12;
 
 export default function AdminStats() {
-  const [from, setFrom] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 30);
-    return new Date(d.getTime() - d.getTimezoneOffset() * 60000)
-      .toISOString()
-      .slice(0, 16);
-  });
-  const [to, setTo] = useState(() =>
-    new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
-      .toISOString()
-      .slice(0, 16)
-  );
+  const [from, setFrom] = useState(() => getDefaultFrom());
+  const [to, setTo] = useState(() => getDefaultTo());
   const [granularity, setGranularity] = useState("daily");
 
   const [summary, setSummary] = useState(null);
@@ -97,11 +103,20 @@ export default function AdminStats() {
     }
   };
 
+  const resetFilters = () => {
+    setFrom(getDefaultFrom());
+    setTo(getDefaultTo());
+    setGranularity("daily");
+  };
+
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [from, to, granularity]);
 
   const openDetail = async (bucket) => {
@@ -138,7 +153,6 @@ export default function AdminStats() {
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Thống kê</h1>
 
-      {/* ====== FILTER FORM ====== */}
       <div className="bg-white rounded-lg shadow p-3 grid md:grid-cols-5 gap-3">
         <div>
           <label className="block text-xs text-gray-600 mb-1">Từ</label>
@@ -170,7 +184,13 @@ export default function AdminStats() {
             <option value="monthly">Theo tháng</option>
           </select>
         </div>
-        <div className="md:col-span-2 flex items-end">
+        <div className="md:col-span-2 flex items-end justify-end gap-2">
+          <button
+            onClick={resetFilters}
+            className="h-10 px-4 rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+          >
+            Xoá lọc
+          </button>
           <button
             onClick={load}
             className="h-10 px-4 rounded bg-blue-600 text-white"
@@ -180,7 +200,6 @@ export default function AdminStats() {
         </div>
       </div>
 
-      {/* ====== KPI ====== */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <KPI title="Doanh thu" value={`${fmtPrice(summary?.revenue)} đ`} />
         <KPI title="Số đơn" value={summary?.orderCount ?? 0} />
@@ -191,7 +210,6 @@ export default function AdminStats() {
         />
       </div>
 
-      {/* ====== CHART ====== */}
       <div className="bg-white rounded-lg shadow p-3">
         <div className="font-semibold mb-3">
           Biểu đồ doanh thu theo{" "}
@@ -234,7 +252,6 @@ export default function AdminStats() {
         )}
       </div>
 
-      {/* ====== TREND TABLE ====== */}
       <div className="bg-white rounded-lg shadow p-3">
         <div className="font-semibold mb-2">
           Doanh thu theo{" "}
@@ -258,7 +275,10 @@ export default function AdminStats() {
             <tbody>
               {trend.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-3 py-6 text-center text-gray-500">
+                  <td
+                    colSpan={5}
+                    className="px-3 py-6 text-center text-gray-500"
+                  >
                     Không có dữ liệu
                   </td>
                 </tr>
@@ -297,7 +317,6 @@ export default function AdminStats() {
         </div>
       </div>
 
-      {/* ====== TOP PRODUCTS ====== */}
       <div className="bg-white rounded-lg shadow p-3">
         <div className="font-semibold mb-2">Top sản phẩm bán chạy</div>
         <div className="overflow-x-auto">
@@ -312,7 +331,10 @@ export default function AdminStats() {
             <tbody>
               {top.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="px-3 py-6 text-center text-gray-500">
+                  <td
+                    colSpan={3}
+                    className="px-3 py-6 text-center text-gray-500"
+                  >
                     Không có dữ liệu
                   </td>
                 </tr>
@@ -376,8 +398,12 @@ export default function AdminStats() {
                         <td className="px-3 py-2">{o.id}</td>
                         <td className="px-3 py-2">{o.userFullName ?? "-"}</td>
                         <td className="px-3 py-2">{o.phoneNumber ?? "-"}</td>
-                        <td className="px-3 py-2">{fmtPrice(o.totalPrice)} đ</td>
-                        <td className="px-3 py-2">{o.statusLabel ?? o.status}</td>
+                        <td className="px-3 py-2">
+                          {fmtPrice(o.totalPrice)} đ
+                        </td>
+                        <td className="px-3 py-2">
+                          {o.statusLabel ?? o.status}
+                        </td>
                         <td className="px-3 py-2">{fmtDate(o.orderTime)}</td>
                       </tr>
                     ))}
