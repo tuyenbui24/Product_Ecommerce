@@ -4,6 +4,7 @@ import {
   adminGetOrder,
   adminUpdateOrderStatus,
   adminDeleteOrder,
+  exportOrders,
 } from "@/api/adminApi";
 import { toast } from "react-toastify";
 import { fmtPrice } from "@/utils/formatCurrency";
@@ -87,6 +88,20 @@ export default function AdminOrders() {
     load(1, size, empty);
   };
 
+  const onExport = async () => {
+    try {
+      const params = {};
+      if (filters.from) params.from = new Date(filters.from).toISOString();
+      if (filters.to) params.to = new Date(filters.to).toISOString();
+      if (filters.statusText?.trim())
+        params.statusText = filters.statusText.trim();
+      if (filters.keyword?.trim()) params.keyword = filters.keyword.trim();
+      await exportOrders(params);
+    } catch {
+      toast.error("Xuất đơn hàng thất bại");
+    }
+  };
+
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil((total || 0) / (size || 10))),
     [total, size]
@@ -150,10 +165,17 @@ export default function AdminOrders() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">Quản lý đơn hàng</h1>
         <div className="flex items-center gap-3 text-sm text-gray-600">
           <span>Tổng: {total} đơn</span>
+          <button
+            type="button"
+            onClick={onExport}
+            className="h-9 px-3 rounded border bg-white"
+          >
+            Xuất CSV
+          </button>
           <select
             value={size}
             onChange={(e) => {

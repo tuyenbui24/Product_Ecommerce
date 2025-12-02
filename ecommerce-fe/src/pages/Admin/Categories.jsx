@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { searchCategories, createCategory, updateCategory, deleteCategory } from "@/api/adminApi";
+import { searchCategories, createCategory,
+   updateCategory, deleteCategory, exportCategories, } from "@/api/adminApi";
 import { toast } from "react-toastify";
 
 export default function AdminCategories() {
@@ -33,6 +34,14 @@ export default function AdminCategories() {
   useEffect(() => { load(page); /* eslint-disable-next-line */ }, [page]);
 
   const onSearch = (e) => { e.preventDefault(); setPage(1); load(1); };
+
+  const onExport = async () => {
+    try {
+      await exportCategories({ keyword: kw.trim() || undefined });
+    } catch {
+      toast.error("Xuất danh mục thất bại");
+    }
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -81,11 +90,24 @@ export default function AdminCategories() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">Quản lý Danh mục</h1>
-        <button onClick={openCreate} className="h-10 px-4 rounded bg-emerald-600 text-white">Thêm danh mục</button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onExport}
+            className="h-10 px-4 rounded border bg-white text-sm"
+          >
+            Xuất CSV
+          </button>
+          <button
+            onClick={openCreate}
+            className="h-10 px-4 rounded bg-emerald-600 text-white"
+          >
+            Thêm danh mục
+          </button>
+        </div>
       </div>
-
       <form onSubmit={onSearch} className="flex gap-2">
         <input value={kw} onChange={e=>setKw(e.target.value)} placeholder="Tìm theo tên..." className="h-10 rounded border px-3" />
         <button className="h-10 px-4 rounded bg-blue-600 text-white">Tìm kiếm</button>

@@ -11,6 +11,7 @@ import {
   addProductSize,
   updateProductSize,
   deleteProductSize,
+  exportProducts,
 } from "@/api/adminApi";
 import { toast } from "react-toastify";
 import { fmtPrice } from "@/utils/formatCurrency";
@@ -170,6 +171,19 @@ export default function AdminProducts() {
     load(1);
   };
 
+  const onExport = async () => {
+    try {
+      await exportProducts({
+        keyword: kw || undefined,
+        categoryId: catFilter || undefined,
+        sizeFilter: sizeFilter || undefined,
+        minStock: minStock || undefined,
+        maxStock: maxStock || undefined,
+      });
+    } catch {
+      toast.error("Xuất sản phẩm thất bại");
+    }
+  };
   const openCreate = () => {
     setEditing(null);
     setForm({
@@ -354,7 +368,7 @@ export default function AdminProducts() {
   
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">Quản lý Sản phẩm</h1>
         <div className="flex items-center gap-2">
           <Listbox value={catFilter} onChange={setCatFilter}>
@@ -390,7 +404,19 @@ export default function AdminProducts() {
               Bỏ lọc
             </button>
           )}
-          <button onClick={openCreate} className="h-10 px-4 rounded bg-emerald-600 text-white">
+          +
+          <button
+            type="button"
+            onClick={onExport}
+            className="h-10 px-3 rounded border bg-white text-sm"
+          >
+            Xuất CSV
+          </button>
+
+          <button
+            onClick={openCreate}
+            className="h-10 px-4 rounded bg-emerald-600 text-white"
+          >
             Thêm sản phẩm
           </button>
         </div>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { searchUsers, deleteUser } from "@/api/adminApi";
+import { searchUsers, deleteUser, exportUsers  } from "@/api/adminApi";
 import { toast } from "react-toastify";
 
 export default function AdminUsers() {
@@ -26,6 +26,14 @@ export default function AdminUsers() {
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [page]);
   const onSearch = (e) => { e.preventDefault(); setPage(1); load(); };
 
+  const onExport = async () => {
+    try {
+      await exportUsers({ keyword: kw.trim() || undefined });
+    } catch {
+      toast.error("Xuất người dùng thất bại");
+    }
+  };
+
   const onDelete = async (id) => {
     if (!confirm("Xoá user này?")) return;
     try {
@@ -41,8 +49,15 @@ export default function AdminUsers() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">Quản lý Người dùng</h1>
+        <button
+          type="button"
+          onClick={onExport}
+          className="h-10 px-4 rounded border bg-white text-sm"
+        >
+          Xuất CSV
+        </button>
       </div>
 
       <form onSubmit={onSearch} className="flex gap-2">

@@ -76,9 +76,50 @@ export const adminDeleteOrder = (id) =>
 const cleanParams = (p = {}) =>
   Object.fromEntries(Object.entries(p).filter(([, v]) => v !== null && v !== undefined && v !== ""));
 
+const downloadCsv = async (path, params = {}, prefix = "export_") => {
+  const qs = cleanParams(params);
+  const ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+  const filename = `${prefix}${ts}.csv`;
+
+  const res = await http.get(path, {
+    params: qs,
+    responseType: "blob",
+  });
+
+  const blob = new Blob([res.data], { type: "text/csv;charset=utf-8;" });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(url);
+};
+
 export const adminStatsSummary = (params = {}) =>
   http.get("/admin/stats/summary", { params: cleanParams(params) });
 export const adminStatsSalesTrend = (params = {}) =>
   http.get("/admin/stats/sales-trend", { params: cleanParams(params) });
 export const adminStatsTopProducts = (params = {}) =>
   http.get("/admin/stats/top-products", { params: cleanParams(params) });
+
+
+export const exportStatsSummary = (params = {}) =>
+  downloadCsv("/admin/stats/export/summary", params, "stats_summary_");
+
+export const exportStatsSalesTrend = (params = {}) =>
+  downloadCsv("/admin/stats/export/sales-trend", params, "stats_trend_");
+
+export const exportStatsTopProducts = (params = {}) =>
+  downloadCsv("/admin/stats/export/top-products", params, "stats_top_");
+export const exportProducts = (params = {}) =>
+  downloadCsv("/products/export", params, "products_");
+export const exportCategories = (params = {}) =>
+  downloadCsv("/categories/export", params, "categories_");
+export const exportUsers = (params = {}) =>
+  downloadCsv("/users/export", params, "users_");
+export const exportStaffs = (params = {}) =>
+  downloadCsv("/staffs/export", params, "staffs_");
+export const exportOrders = (params = {}) =>
+  downloadCsv("/admin/orders/export", params, "orders_");

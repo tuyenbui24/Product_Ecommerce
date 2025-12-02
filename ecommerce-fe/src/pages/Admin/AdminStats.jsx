@@ -5,6 +5,9 @@ import {
   adminStatsSalesTrend,
   adminStatsTopProducts,
   adminListOrders,
+  exportStatsSummary,
+  exportStatsSalesTrend,
+  exportStatsTopProducts,
 } from "@/api/adminApi";
 import {
   BarChart,
@@ -81,6 +84,30 @@ export default function AdminStats() {
     [from, to]
   );
 
+  const onExportSummary = async () => {
+    try {
+      await exportStatsSummary(params);
+    } catch {
+      toast.error("Xuất thống kê tổng quan thất bại");
+    }
+  };
+
+  const onExportTrend = async () => {
+    try {
+      await exportStatsSalesTrend({ ...params, granularity });
+    } catch {
+      toast.error("Xuất doanh thu theo thời gian thất bại");
+    }
+  };
+
+  const onExportTop = async () => {
+    try {
+      await exportStatsTopProducts({ ...params, limit: 10 });
+    } catch {
+      toast.error("Xuất top sản phẩm thất bại");
+    }
+  };
+
   const load = async () => {
     try {
       setLoading(true);
@@ -153,53 +180,87 @@ export default function AdminStats() {
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Thống kê</h1>
 
-      <div className="bg-white rounded-lg shadow p-3 grid md:grid-cols-5 gap-3">
-        <div>
-          <label className="block text-xs text-gray-600 mb-1">Từ</label>
-          <input
-            type="datetime-local"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-            className="h-10 rounded border px-3 w-full"
-          />
+      {/* THANH FILTER + NÚT HÀNH ĐỘNG */}
+      <div className="bg-white rounded-lg shadow p-3 space-y-3">
+        {/* Hàng filter */}
+        <div className="grid md:grid-cols-4 lg:grid-cols-5 gap-3">
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Từ</label>
+            <input
+              type="datetime-local"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+              className="h-10 rounded border px-3 w-full text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Đến</label>
+            <input
+              type="datetime-local"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              className="h-10 rounded border px-3 w-full text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Phân loại</label>
+            <select
+              value={granularity}
+              onChange={(e) => setGranularity(e.target.value)}
+              className="h-10 rounded border px-3 w-full text-sm"
+            >
+              <option value="daily">Theo ngày</option>
+              <option value="weekly">Theo tuần</option>
+              <option value="monthly">Theo tháng</option>
+            </select>
+          </div>
+
+          {/* Nút reset / load */}
+          <div className="md:col-span-1 lg:col-span-2 flex items-end justify-end gap-2">
+            <button
+              onClick={resetFilters}
+              className="h-10 px-4 rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 text-sm whitespace-nowrap"
+            >
+              Xoá lọc
+            </button>
+            <button
+              onClick={load}
+              className="h-10 px-4 rounded bg-blue-600 text-white text-sm whitespace-nowrap"
+            >
+              Làm mới
+            </button>
+          </div>
         </div>
-        <div>
-          <label className="block text-xs text-gray-600 mb-1">Đến</label>
-          <input
-            type="datetime-local"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-            className="h-10 rounded border px-3 w-full"
-          />
-        </div>
-        <div>
-          <label className="block text-xs text-gray-600 mb-1">Phân loại</label>
-          <select
-            value={granularity}
-            onChange={(e) => setGranularity(e.target.value)}
-            className="h-10 rounded border px-3 w-full"
-          >
-            <option value="daily">Theo ngày</option>
-            <option value="weekly">Theo tuần</option>
-            <option value="monthly">Theo tháng</option>
-          </select>
-        </div>
-        <div className="md:col-span-2 flex items-end justify-end gap-2">
+
+        {/* Hàng nút export (có flex-wrap, tự xuống dòng nếu chật) */}
+        <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
           <button
-            onClick={resetFilters}
-            className="h-10 px-4 rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+            type="button"
+            onClick={onExportSummary}
+            className="h-9 px-3 rounded border bg-white text-sm whitespace-nowrap hover:bg-gray-100"
           >
-            Xoá lọc
+            Xuất tổng quan
           </button>
+
           <button
-            onClick={load}
-            className="h-10 px-4 rounded bg-blue-600 text-white"
+            type="button"
+            onClick={onExportTrend}
+            className="h-9 px-3 rounded border bg-white text-sm whitespace-nowrap hover:bg-gray-100"
           >
-            Làm mới
+            Xuất doanh thu
+          </button>
+
+          <button
+            type="button"
+            onClick={onExportTop}
+            className="h-9 px-3 rounded border bg-white text-sm whitespace-nowrap hover:bg-gray-100"
+          >
+            Xuất top sản phẩm
           </button>
         </div>
       </div>
 
+      {/* KPI */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <KPI title="Doanh thu" value={`${fmtPrice(summary?.revenue)} đ`} />
         <KPI title="Số đơn" value={summary?.orderCount ?? 0} />
@@ -210,6 +271,7 @@ export default function AdminStats() {
         />
       </div>
 
+      {/* BIỂU ĐỒ */}
       <div className="bg-white rounded-lg shadow p-3">
         <div className="font-semibold mb-3">
           Biểu đồ doanh thu theo{" "}
@@ -252,6 +314,7 @@ export default function AdminStats() {
         )}
       </div>
 
+      {/* BẢNG TREND */}
       <div className="bg-white rounded-lg shadow p-3">
         <div className="font-semibold mb-2">
           Doanh thu theo{" "}
@@ -317,6 +380,7 @@ export default function AdminStats() {
         </div>
       </div>
 
+      {/* BẢNG TOP PRODUCT */}
       <div className="bg-white rounded-lg shadow p-3">
         <div className="font-semibold mb-2">Top sản phẩm bán chạy</div>
         <div className="overflow-x-auto">
@@ -355,7 +419,7 @@ export default function AdminStats() {
         <div className="text-center text-sm text-gray-500">Đang tải…</div>
       )}
 
-      {/* ====== MODAL CHI TIẾT ĐƠN ====== */}
+      {/* MODAL CHI TIẾT ĐƠN */}
       {showDetail && (
         <div className="fixed inset-0 bg-black/30 grid place-items-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-lg p-5 w-[800px] max-w-[95vw] max-h-[85vh] overflow-auto">
@@ -365,7 +429,7 @@ export default function AdminStats() {
               </h2>
               <button
                 onClick={() => setShowDetail(false)}
-                className="h-9 px-4 rounded border hover:bg-gray-100"
+                className="h-9 px-4 rounded border hover:bg-gray-100 text-sm"
               >
                 Đóng
               </button>

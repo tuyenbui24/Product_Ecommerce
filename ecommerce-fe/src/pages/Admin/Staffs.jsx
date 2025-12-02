@@ -4,6 +4,7 @@ import {
   createStaff,
   updateStaff,
   deleteStaff,
+  exportStaffs,
 } from "@/api/adminApi";
 import http from "@/api/http";
 import { toast } from "react-toastify";
@@ -70,6 +71,14 @@ export default function AdminStaffs() {
     e.preventDefault();
     setPage(1);
     load();
+  };
+
+  const onExport = async () => {
+    try {
+      await exportStaffs({ keyword: kw.trim() || undefined });
+    } catch {
+      toast.error("Xuất tài khoản quản trị thất bại");
+    }
   };
 
   const openCreate = () => {
@@ -142,14 +151,23 @@ export default function AdminStaffs() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">Quản lý tài khoản quản trị</h1>
-        <button
-          onClick={openCreate}
-          className="h-10 px-4 rounded bg-emerald-600 text-white"
-        >
-          Thêm tài khoản
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onExport}
+            className="h-10 px-4 rounded border bg-white text-sm"
+          >
+            Xuất CSV
+          </button>
+          <button
+            onClick={openCreate}
+            className="h-10 px-4 rounded bg-emerald-600 text-white"
+          >
+            Thêm tài khoản
+          </button>
+        </div>
       </div>
 
       <form onSubmit={onSearch} className="flex gap-2">
